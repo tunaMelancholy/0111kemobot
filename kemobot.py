@@ -93,7 +93,7 @@ def clean_up_dir(dir_path):
 # 指令处理函数
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = (
-        "欢迎使用TunasKemoBot喵!\n\n"
+        "BOT介绍\n\n"
         "一个用来爬取Kemono.su的Bot喵!\n"
         "目前Bot还在测试阶段\n"
         "-----------------------------\n"
@@ -103,10 +103,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/u <URL> - 下载对应作者的全部帖子\n"
         "-----------------------------\n"
         "当前版本V1.0.4\n"
-        "如果有问题请联系 @tunaloli\n"
+        "如果有问题请联系 @\n"
         "不经常维护.....\n"
         "由于机器性能原因，Bot仅能处理一位用户的需求，在此期间其他的请求将会无响应\n"
-        "上次更新：2025年1月11日21:54:01"
+        "/u 功能目前存在BUG，无法使用"
     )
     await update.message.reply_text(message)
 
