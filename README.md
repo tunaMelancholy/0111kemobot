@@ -1,5 +1,5 @@
 # KemoBot
-**A Python program for easily downlaoding file**
+**A Python program for downlaoding file easily**
 
 *一个自动爬取Kemono.su的Py程序*
 ## 自用程序...
