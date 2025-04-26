@@ -1,6 +1,7 @@
 import os
 import re
 import requests
+import time
 import shutil
 import zipfile
 from datetime import datetime
@@ -13,22 +14,31 @@ from concurrent.futures import ThreadPoolExecutor
 #   例如 https://kemono.su/fanbox/user/22601389
 
 # 任选其一，虽然填写两个也可以正常工作，但是不便于分类
-cst_post_url=""
-cst_user_url=""
+cst_post_url = "https://kemono.su/fanbox/user/1168970/post/9374744"
+cst_user_url = ""
+# 当前下载页数
+pages = 1
 
+api_pages = (pages -1) *50
 # 安装依赖 pip install -r requirements.txt
 # 或者 pip install requests tqdm
 
 # 程序的调用了Kemono的API
 # 更新时间：2025年1月12日
+# 从Kemo_bot迁移主要功能至Kemo_Downloader
 
-# 尽量使用Python3.9以下的版本，因为Python3.10以上版本可能会存在未知问题....
-# 我使用的版本为Python3.9.13
+# 更新时间：2025年3月28日
+# 修复了download_user的部分Bug和Json解析错误
+# 优化了Downloader下载逻辑，新加了超时重试机制
+# 删除了create_zip_file代码
+
+# 更新时间：2025年3月29日
+# 新加了Windows新建文件夹特殊字符剔除
 
 # 设置线程池最大线程数，请设置合理数值，最好不要过大(64个线程)
 # 因为目前不知道Kemono的API有没有限制....
 # 如果下载的图片很多很大的情况下，可以调整大一些
-THREAD_POOL_SIZE = 12
+THREAD_POOL_SIZE = 24
 executor = ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE)
 
 # 辅助函数，其实没用到，可以注释掉
@@ -45,28 +55,39 @@ def get_headers():
         "Connection": "keep-alive",
     }
 
+
 def download_file(url, output_dir, index, progress_bar):
-    try:
-        response = requests.get(url, headers=get_headers(), stream=True)
-        response.raise_for_status()
-        ext = url.split(".")[-1].split("?")[0]  # 提取文件扩展名
-        filename = f"{str(index).zfill(5)}.{ext}"
-        file_path = os.path.join(output_dir, filename)
+    max_retries = 3
+    retry_count = 0
 
-        #弃用，太耗费时间
-        total_size = int(response.headers.get('content-length', 0))
-        downloaded_size = 0
+    while retry_count < max_retries:
+        try:
+            response = requests.get(url, headers=get_headers(), stream=True)
+            response.raise_for_status()
+            ext = url.split(".")[-1].split("?")[0]  # 提取文件扩展名
+            filename = f"{str(index).zfill(5)}.{ext}"
+            file_path = os.path.join(output_dir, filename)
 
-        with open(file_path, "wb") as file:
-            for data in response.iter_content(chunk_size=1024):
-                file.write(data)
-                downloaded_size += len(data)
-                progress_bar.update(len(data))
+            # 弃用，太耗费时间
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded_size = 0
 
-        return file_path
-    except Exception as e:
-        print(f"下载失败: {url}: {e}")
-        return None
+            with open(file_path, "wb") as file:
+                for data in response.iter_content(chunk_size=1024):
+                    file.write(data)
+                    downloaded_size += len(data)
+                    progress_bar.update(len(data))
+
+            return file_path
+        except Exception as e:
+            retry_count += 1
+            if retry_count < max_retries:
+                print(f"下载失败，正在重试({retry_count}/{max_retries}): {url}")
+            else:
+                print(f"下载失败，已达到最大重试次数({max_retries}): {url}: {e}")
+            time.sleep(1)  # 每次重试前等待1秒
+
+    return None
 
 def create_zip_file(files, output_dir, base_name):
     zip_files = []
@@ -98,6 +119,10 @@ def download_file_threaded(url, output_dir, index, downloaded_files, progress_ba
     if file_path:
         downloaded_files.append(file_path)
 
+def clean_filename(filename):
+    """清理 Windows 文件名中的非法字符"""
+    return re.sub(r'[\\/:*?"<>|]', '', filename)
+
 def download_post(url):
     # 验证 提取URL
     match = re.search(r"(fanbox|fantia|patreon)/user/\d+/post/\d+", url)
@@ -109,15 +134,23 @@ def download_post(url):
     response = requests.get(api_url, headers=get_headers())
     response.raise_for_status()
     json_data = response.json()
-
+    # print(url)
+    # print(match)
+    # print(api_url)
+    # print(json_data)
     # 提取标题
-    title = json_data.get("post", {}).get("title", "无标题")
-    print(f"正在处理帖子: {title}")
+    title = json_data.get("post", {}).get("published")
+    title1 = itle = json_data.get("post", {}).get("title")
+    print(f"\n正在处理帖子: {title}")
 
     # 创建输出目录
-    output_dir = f"./kemono/{title}"
-    os.makedirs(output_dir, exist_ok=True)
-
+    data_str = title[:10] +"-"+ title1
+    clean_str = clean_filename(data_str)
+    output_dir = f"./kemono/{clean_str}"
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+    except Exception as e:
+        print(e)
     # 提取图片和文件链接
     previews = json_data.get("previews", [])
     image_links = [
@@ -158,13 +191,13 @@ def download_post(url):
             future.result()
 
     # 打包文件
-    base_name = f"Kemono_{title}"
-    zip_files = create_zip_file(downloaded_files, output_dir, base_name)
+    base_name = f"Kemono_{data_str}"
+    # zip_files = create_zip_file(downloaded_files, output_dir, base_name)
 
     # 输出压缩包信息
-    print("下载完成，以下是生成的压缩包文件:")
-    for zip_file in zip_files:
-        print(zip_file)
+    # print("下载完成，以下是生成的压缩包文件:")
+    # for zip_file in zip_files:
+    #     print(zip_file)
 
 def download_user(url):
     # 提取API链接
@@ -173,7 +206,7 @@ def download_user(url):
         print("无效的URL格式，请检查后重试。")
         return
 
-    api_url = f"https://kemono.su/api/v1/{match.group(0)}/posts-legacy"
+    api_url = f"https://kemono.su/api/v1/{match.group(0)}/posts-legacy?o={api_pages}"
     response = requests.get(api_url, headers=get_headers())
     response.raise_for_status()
     json_data = response.json()
