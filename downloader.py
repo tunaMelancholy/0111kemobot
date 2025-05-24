@@ -14,10 +14,13 @@ from concurrent.futures import ThreadPoolExecutor
 #   例如 https://kemono.su/fanbox/user/22601389
 
 # 任选其一，虽然填写两个也可以正常工作，但是不便于分类
-cst_post_url = "https://kemono.su/fanbox/user/1168970/post/9374744"
-cst_user_url = ""
-# 当前下载页数
-pages = 1
+# 下载指定帖子内容
+cst_post_url = ""
+# 下载指定用户所有帖子
+cst_user_url = "https://kemono.su/fanbox/user/34151526"
+# https://kemono.su/fanbox/user/26068055
+# 当前下载页数，配合cst_user_url使用
+pages = 3
 
 api_pages = (pages -1) *50
 # 安装依赖 pip install -r requirements.txt
