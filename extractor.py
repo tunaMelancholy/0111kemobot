@@ -68,5 +68,5 @@ def main(root_dir):
 
 
 if __name__ == "__main__":
-    root_dir = 'NAKK'
+    root_dir = 'セトマン'
     main(root_dir)
