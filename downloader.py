@@ -15,9 +15,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 # 任选其一，虽然填写两个也可以正常工作，但是不便于分类
 # 下载指定帖子内容
-cst_post_url = ""
+cst_post_url = "https://kemono.su/patreon/user/89312317/post/97392069"
 # 下载指定用户所有帖子
-cst_user_url = "https://kemono.su/fantia/user/4901"
+cst_user_url = ""
 # https://kemono.su/fanbox/user/26068055
 # 当前下载页数，配合cst_user_url使用
 pages = 1
